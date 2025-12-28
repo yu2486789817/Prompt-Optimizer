@@ -1,8 +1,10 @@
 'use client';
 
-import { Copy, Download, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Copy, Download, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import CharCounter from '@/components/CharCounter';
+import ImagePreviewModal from './ImagePreviewModal';
 
 interface OutputDisplayProps {
   positivePrompt: string;
@@ -24,6 +26,7 @@ export default function OutputDisplay({
   onFineTune
 }: OutputDisplayProps) {
   const { addToast } = useToast();
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleCopy = async (text: string, type: string) => {
     try {
@@ -76,8 +79,18 @@ export default function OutputDisplay({
               <label className="block text-sm font-medium text-gray-900 dark:text-gray-200">
                 主提示词
               </label>
-              {positivePrompt && onFineTune && (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                {positivePrompt && (
+                  <button
+                    onClick={() => setShowPreview(true)}
+                    className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm flex items-center gap-1 mr-1"
+                    title="使用 Z-Image 快速预览"
+                  >
+                    <ImageIcon size={14} />
+                    预览
+                  </button>
+                )}
+                {positivePrompt && onFineTune && (
                   <button
                     onClick={() => onFineTune(positivePrompt)}
                     className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 text-sm flex items-center gap-1"
@@ -85,6 +98,8 @@ export default function OutputDisplay({
                     <Sparkles size={14} />
                     微调
                   </button>
+                )}
+                {positivePrompt && (
                   <button
                     onClick={() => handleCopy(positivePrompt, '主提示词')}
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm flex items-center gap-1"
@@ -92,17 +107,8 @@ export default function OutputDisplay({
                     <Copy size={14} />
                     复制
                   </button>
-                </div>
-              )}
-              {positivePrompt && !onFineTune && (
-                <button
-                  onClick={() => handleCopy(positivePrompt, '主提示词')}
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm flex items-center gap-1"
-                >
-                  <Copy size={14} />
-                  复制
-                </button>
-              )}
+                )}
+              </div>
             </div>
             <div className="relative">
               <textarea
@@ -125,8 +131,8 @@ export default function OutputDisplay({
               <label className="block text-sm font-medium text-gray-900 dark:text-gray-200">
                 负面提示词
               </label>
-              {negativePrompt && onFineTune && (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                {negativePrompt && onFineTune && (
                   <button
                     onClick={() => onFineTune(negativePrompt)}
                     className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 text-sm flex items-center gap-1"
@@ -134,6 +140,8 @@ export default function OutputDisplay({
                     <Sparkles size={14} />
                     微调
                   </button>
+                )}
+                {negativePrompt && (
                   <button
                     onClick={() => handleCopy(negativePrompt, '负面提示词')}
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm flex items-center gap-1"
@@ -141,17 +149,8 @@ export default function OutputDisplay({
                     <Copy size={14} />
                     复制
                   </button>
-                </div>
-              )}
-              {negativePrompt && !onFineTune && (
-                <button
-                  onClick={() => handleCopy(negativePrompt, '负面提示词')}
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm flex items-center gap-1"
-                >
-                  <Copy size={14} />
-                  复制
-                </button>
-              )}
+                )}
+              </div>
             </div>
             <div className="relative">
               <textarea
@@ -242,9 +241,16 @@ export default function OutputDisplay({
         </div>
       )}
 
-      {/* 下载按钮 */}
+      {/* 底部按钮 */}
       {(positivePrompt || negativePrompt) && (
-        <div className="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-700 gap-3">
+          <button
+            onClick={() => setShowPreview(true)}
+            className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors flex items-center gap-2"
+          >
+            <ImageIcon size={16} />
+            预览效果
+          </button>
           <button
             onClick={handleDownload}
             className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors flex items-center gap-2"
@@ -254,6 +260,14 @@ export default function OutputDisplay({
           </button>
         </div>
       )}
+
+      {/* 图片预览模态框 */}
+      <ImagePreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        prompt={positivePrompt}
+        negativePrompt={negativePrompt}
+      />
     </div>
   );
 }
