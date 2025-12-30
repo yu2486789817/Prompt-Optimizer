@@ -370,11 +370,12 @@ export default function Home() {
         setInputPrompt(prev => `${prev}, ${positive}`);
       }
     } else {
-      // 没输入时直接加载到输出
-      setOutputPrompt(positive);
-      setNegativePrompt(negative);
-      addToast('模版已加载到输出区域', 'success');
+      setInputPrompt(positive);
     }
+    if (negative.trim()) {
+      setNegativePrompt(negative);
+    }
+    addToast('模版已加载到输入区域', 'success');
   };
 
   // 收藏选择
