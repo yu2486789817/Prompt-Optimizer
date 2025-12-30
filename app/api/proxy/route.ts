@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { http } from '@/lib/http';
 import { MODEL_IDS } from '@/lib/models';
 
-// 模型配置
-const modelConfigs: Record<string, { endpoint: string; headers: Record<string, string> }> = {
+type ModelConfig = {
+  endpoint: string;
+  headers: Record<string, string>;
+};
+
+// 模型配置（只作为模板，不在请求中直接修改）
+const modelConfigs: Record<string, ModelConfig> = {
   [MODEL_IDS.GEMINI]: {
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
     headers: {
@@ -30,7 +35,6 @@ const modelConfigs: Record<string, { endpoint: string; headers: Record<string, s
   }
 };
 
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -52,7 +56,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 如果没有提供 API Key，返回错误
+    // 复制配置，避免跨请求污染
+    const endpointUrl = new URL(config.endpoint);
+    const headers = { ...config.headers };
+
+    // API Key 校验
     if (!apiKey || apiKey.trim() === '') {
       return NextResponse.json(
         { error: `API key is required for model: ${model}` },
@@ -60,27 +68,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 准备请求头
-    const headers = { ...config.headers };
-
-    // 根据不同模型添加认证头
+    // 根据不同模型添加认证信息
     switch (model) {
       case MODEL_IDS.GEMINI:
-        config.endpoint += `?key=${apiKey}`;
+        endpointUrl.searchParams.set('key', apiKey);
         break;
       case MODEL_IDS.GROK:
-        headers['Authorization'] = `Bearer ${apiKey}`;
-        break;
       case MODEL_IDS.DEEPSEEK:
-        headers['Authorization'] = `Bearer ${apiKey}`;
-        break;
       case MODEL_IDS.QWEN:
         headers['Authorization'] = `Bearer ${apiKey}`;
-        headers['X-DashScope-SSE'] = 'disable';
+        if (model === MODEL_IDS.QWEN) {
+          headers['X-DashScope-SSE'] = 'disable';
+        }
         break;
     }
 
-    // 准备请求体
+    // 构建请求体
     let requestBody: any;
 
     switch (model) {
@@ -99,7 +102,7 @@ export async function POST(request: NextRequest) {
       case MODEL_IDS.GROK:
         requestBody = {
           model: MODEL_IDS.GROK,
-          messages: messages,
+          messages,
           max_tokens: 2000,
           temperature: 0,
           stream: false
@@ -108,8 +111,8 @@ export async function POST(request: NextRequest) {
 
       case MODEL_IDS.DEEPSEEK:
         requestBody = {
-          model: model,
-          messages: messages,
+          model,
+          messages,
           max_tokens: 2000,
           temperature: 0.7
         };
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
       case MODEL_IDS.QWEN:
         requestBody = {
           model: 'Qwen/Qwen3-235B-A22B-Thinking-2507',
-          messages: messages,
+          messages,
           max_tokens: 2000,
           temperature: 0.7,
           stream: false
@@ -127,16 +130,16 @@ export async function POST(request: NextRequest) {
 
       default:
         requestBody = {
-          model: model,
-          messages: messages,
+          model,
+          messages,
           max_tokens: 2000,
           temperature: 0.7
         };
     }
 
     // 发送请求到对应模型 API
-    const response = await http.post(config.endpoint, requestBody, {
-      headers: headers
+    const response = await http.post(endpointUrl.toString(), requestBody, {
+      headers
     });
 
     if (!response.data) {
@@ -173,14 +176,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       result: finalResult,
-      model: model,
+      model,
       mock: false
     });
 
   } catch (error: any) {
     console.error('Proxy error:', error);
 
-    // 如果是axios错误，提取更详细的信息
+    // 如果是axios错误，提取更详细的消息
     if (error.response) {
       return NextResponse.json(
         {

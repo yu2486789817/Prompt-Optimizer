@@ -132,20 +132,34 @@ export default function Home() {
   // 翻译文本
   const translateText = useCallback(async (text: string): Promise<string> => {
     try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // 检查是否在 Electron 环境中
+      if (window.electron) {
+        const data = await window.electron.translate({
           text,
           from: 'en',
           to: 'zh',
           service: 'proxy'
-        })
-      });
+        });
+        if (data.success) {
+          return data.translatedText;
+        }
+      } else {
+        // 开发模式：使用 fetch
+        const response = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            from: 'en',
+            to: 'zh',
+            service: 'proxy'
+          })
+        });
 
-      const data = await response.json();
-      if (data.success) {
-        return data.translatedText;
+        const data = await response.json();
+        if (data.success) {
+          return data.translatedText;
+        }
       }
     } catch (error) {
       console.error('翻译失败:', error);
@@ -172,18 +186,19 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: selectedModel.id,
-          apiKey: apiKey,
-          messages: [
-            {
-              role: 'system',
-              content: `你是一个专业的AI绘画提示词优化专家。请根据用户的描述，生成高质量的英文AI绘画提示词。
+      let data;
+      
+      // 检查是否在 Electron 环境中
+      if (typeof window !== 'undefined' && window.electron) {
+        // 使用 IPC 通信
+        try {
+          data = await window.electron.proxy({
+            model: selectedModel.id,
+            apiKey: apiKey,
+            messages: [
+              {
+                role: 'system',
+                content: `你是一个专业的AI绘画提示词优化专家。请根据用户的描述，生成高质量的英文AI绘画提示词。
 
 要求：
 1. 返回JSON格式：{"positive": "主提示词", "negative": "负面提示词"}
@@ -191,16 +206,54 @@ export default function Home() {
 3. 负面提示词要包含需要避免的元素
 4. 使用英文，用逗号分隔各个标签
 5. 确保提示词结构清晰、逻辑合理`
+              },
+              {
+                role: 'user',
+                content: inputPrompt
+              }
+            ]
+          });
+        } catch (ipcError: any) {
+          console.error('IPC call failed:', ipcError);
+          throw new Error(`IPC 通信失败: ${ipcError.message || '未知错误'}`);
+        }
+      } else {
+        // 开发模式：使用 fetch（仅在开发环境中可用）
+        if (process.env.NODE_ENV === 'development') {
+          const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
             },
-            {
-              role: 'user',
-              content: inputPrompt
-            }
-          ]
-        }),
-      });
+            body: JSON.stringify({
+              model: selectedModel.id,
+              apiKey: apiKey,
+              messages: [
+                {
+                  role: 'system',
+                  content: `你是一个专业的AI绘画提示词优化专家。请根据用户的描述，生成高质量的英文AI绘画提示词。
 
-      const data = await response.json();
+要求：
+1. 返回JSON格式：{"positive": "主提示词", "negative": "负面提示词"}
+2. 主提示词要包含主体、风格、画质、光影、构图等要素
+3. 负面提示词要包含需要避免的元素
+4. 使用英文，用逗号分隔各个标签
+5. 确保提示词结构清晰、逻辑合理`
+                },
+                {
+                  role: 'user',
+                  content: inputPrompt
+                }
+              ]
+            }),
+          });
+
+          data = await response.json();
+        } else {
+          // 打包后的应用，但 window.electron 不存在
+          throw new Error('Electron IPC 未正确加载。请重启应用或检查 preload.js 配置。');
+        }
+      }
 
       if (data.error) {
         throw new Error(data.error);
@@ -234,10 +287,12 @@ export default function Home() {
 
           // 保存历史记录
           historyStorage.add({
-            modelName: selectedModel.name,
+            modelId: selectedModel.id,
             inputPrompt,
             positivePrompt: positive,
             negativePrompt: negative,
+            translatedPositive: '',
+            translatedNegative: '',
           });
           setHistoryRefreshTrigger(prev => prev + 1);
 
@@ -305,16 +360,19 @@ export default function Home() {
 
   // 模版选择
   const handleTemplateSelect = (template: TemplateItem) => {
+    const positive = template.positive ?? template.template;
+    const negative = template.negative ?? '';
+    
     if (inputPrompt.trim()) {
       if (confirm('是否替换当前输入内容？取消则追加到末尾。')) {
-        setInputPrompt(template.positive);
+        setInputPrompt(positive);
       } else {
-        setInputPrompt(prev => `${prev}, ${template.positive}`);
+        setInputPrompt(prev => `${prev}, ${positive}`);
       }
     } else {
       // 没输入时直接加载到输出
-      setOutputPrompt(template.positive);
-      setNegativePrompt(template.negative);
+      setOutputPrompt(positive);
+      setNegativePrompt(negative);
       addToast('模版已加载到输出区域', 'success');
     }
   };

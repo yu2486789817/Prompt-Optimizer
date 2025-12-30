@@ -67,15 +67,24 @@ export default function TranslationPanel({ isOpen, onClose }: TranslationPanelPr
         secretKey: storage.get(`${selectedService}TranslateSecretKey`) || undefined
       };
 
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+      let data: TranslationResponse;
+      
+      // 检查是否在 Electron 环境中
+      if (window.electron) {
+        // 使用 IPC 通信
+        data = await window.electron.translate(request);
+      } else {
+        // 开发模式：使用 fetch
+        const response = await fetch('/api/translate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
+        });
 
-      const data: TranslationResponse = await response.json();
+        data = await response.json();
+      }
 
       if (data.success) {
         setTranslatedText(data.translatedText);

@@ -1,5 +1,7 @@
 import { storage } from './utils';
 
+const HISTORY_KEY = 'prompt_history';
+
 // 备份数据接口
 interface BackupData {
     version: string;
@@ -26,7 +28,7 @@ export function downloadBackup(): void {
             translationApiKeys: storage.getJSON('translationApiKeys', {}),
             customVocabulary: storage.getJSON('customVocabulary', []),
             loras: storage.getJSON('loras', []),
-            history: storage.getJSON('history', []),
+            history: storage.getJSON(HISTORY_KEY, []),
             templates: storage.getJSON('templates', []),
             favorites: storage.getJSON('favorites', []),
             selectedModel: storage.get('selectedModel') || undefined,
@@ -84,7 +86,7 @@ export async function importFromFile(file: File): Promise<{ success: boolean; me
         }
 
         if (backup.data.history) {
-            storage.setJSON('history', backup.data.history);
+            storage.setJSON(HISTORY_KEY, backup.data.history);
             restoredCount++;
         }
 
@@ -125,7 +127,7 @@ export function clearAllConfig(): void {
         'translationApiKeys',
         'customVocabulary',
         'loras',
-        'history',
+        'prompt_history',
         'templates',
         'favorites',
         'selectedModel',

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { X, Plus, Upload, Trash2, Languages } from 'lucide-react';
-import { VocabItem, storage } from '@/lib/utils';
+import { storage } from '@/lib/utils';
+import { VocabItem } from '@/lib/vocab';
 
 interface AddVocabModalProps {
   isOpen: boolean;
@@ -25,18 +26,33 @@ export default function AddVocabModal({ isOpen, onClose, onAddVocab, categories 
     if (chineseText.trim() && detectLanguage(chineseText.trim()) === 'zh') {
       setIsTranslating(true);
       try {
-        const response = await fetch('/api/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        let data;
+        
+        // 检查是否在 Electron 环境中
+        if (window.electron) {
+          // 使用 IPC 通信
+          data = await window.electron.translate({
             text: chineseText,
             from: 'zh',
             to: 'en',
             service: 'proxy'
-          })
-        });
+          });
+        } else {
+          // 开发模式：使用 fetch
+          const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: chineseText,
+              from: 'zh',
+              to: 'en',
+              service: 'proxy'
+            })
+          });
 
-        const data = await response.json();
+          data = await response.json();
+        }
+        
         if (data.success && data.translatedText) {
           setSingleVocab(prev => ({ ...prev, english: data.translatedText }));
         }
@@ -66,6 +82,7 @@ export default function AddVocabModal({ isOpen, onClose, onAddVocab, categories 
     const { english, chinese, category } = singleVocab;
     if (english.trim() && chinese.trim()) {
       const newVocab: VocabItem = {
+        id: Date.now().toString(),
         english: english.trim(),
         chinese: chinese.trim(),
         category: category.trim()
@@ -81,8 +98,9 @@ export default function AddVocabModal({ isOpen, onClose, onAddVocab, categories 
 
     const lines = batchInput.trim().split('\n');
     const newVocabs: VocabItem[] = [];
+    const baseTimestamp = Date.now();
 
-    lines.forEach(line => {
+    lines.forEach((line, index) => {
       const trimmed = line.trim();
       if (!trimmed) return;
 
@@ -94,6 +112,7 @@ export default function AddVocabModal({ isOpen, onClose, onAddVocab, categories 
 
       if (parts.length >= 2 && parts[0] && parts[1]) {
         newVocabs.push({
+          id: `${baseTimestamp}-${index}`,
           english: parts[0],
           chinese: parts[1],
           category: parts[2] || batchCategory
@@ -106,12 +125,14 @@ export default function AddVocabModal({ isOpen, onClose, onAddVocab, categories 
         if (lang === 'zh') {
           // 这里应该调用翻译API，但为了简单起见，先作为中文处理
           newVocabs.push({
+            id: `${baseTimestamp}-${index}`,
             english: `[待翻译] ${text}`,
             chinese: text,
             category: batchCategory
           });
         } else {
           newVocabs.push({
+            id: `${baseTimestamp}-${index}`,
             english: text,
             chinese: `[待翻译] ${text}`,
             category: batchCategory

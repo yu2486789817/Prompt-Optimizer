@@ -14,6 +14,17 @@ export interface HistoryItem {
 const HISTORY_KEY = 'prompt_history';
 const MAX_HISTORY_ITEMS = 50;
 
+// 生成 UUID（浏览器兼容）
+function generateUUID(): string {
+  // 优先使用浏览器原生 API
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  
+  // 降级方案：使用时间戳 + 随机数
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
 export const historyStorage = {
   // Get all history items
   getAll: (): HistoryItem[] => {
@@ -25,7 +36,7 @@ export const historyStorage = {
     const history = historyStorage.getAll();
     const newItem: HistoryItem = {
       ...item,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       timestamp: Date.now(),
     };
 

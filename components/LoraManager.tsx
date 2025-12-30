@@ -281,7 +281,7 @@ export default function LoraManager({ isOpen, onClose, onSelectLora }: LoraManag
       }
     });
 
-    return [...new Set(words)]; // 去重
+    return Array.from(new Set(words)); // 去重
   };
 
   // 批量导入处理函数

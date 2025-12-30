@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Sparkles, X, Send } from 'lucide-react';
-import { supportedModels, AIModel, storage } from '@/lib/utils';
+import { storage } from '@/lib/utils';
+import { supportedModels, AIModel } from '@/lib/models';
 
 interface FineTunePanelProps {
   isOpen: boolean;
@@ -40,15 +41,15 @@ export default function FineTunePanel({
     setIsProcessing(true);
     try {
       // 获取 API Key
-      const apiKeys = storage.getJSON('apiKeys', {});
+      const apiKeys: Record<string, string> = storage.getJSON('apiKeys', {});
       const apiKey = apiKeys[selectedModel.modelId];
 
-      const response = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      let data;
+      
+      // 检查是否在 Electron 环境中
+      if (window.electron) {
+        // 使用 IPC 通信
+        data = await window.electron.proxy({
           model: selectedModel.modelId,
           messages: [
             {
@@ -72,10 +73,43 @@ export default function FineTunePanel({
             }
           ],
           apiKey: apiKey
-        }),
-      });
+        });
+      } else {
+        // 开发模式：使用 fetch
+        const response = await fetch('/api/proxy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: selectedModel.modelId,
+            messages: [
+              {
+                role: 'system',
+                content: `你是一个AI绘画提示词优化专家。用户会提供原始提示词和微调要求，你需要根据要求对提示词进行精细调整。
 
-      const data = await response.json();
+要求：
+1. 保持提示词的核心要素和结构
+2. 根据用户的具体要求进行调整
+3. 确保调整后的提示词更加符合用户需求
+4. 保持英文，使用逗号分隔各个标签
+5. 返回优化后的提示词，不要额外解释
+
+如果用户提供的是JSON格式的正负提示词，请分别进行优化并返回相同的JSON格式。`
+              },
+              {
+                role: 'user',
+                content: `原始提示词：${initialPrompt}
+
+微调要求：${fineTuneRequest}`
+              }
+            ],
+            apiKey: apiKey
+          }),
+        });
+
+        data = await response.json();
+      }
 
       if (data.error) {
         throw new Error(data.error);

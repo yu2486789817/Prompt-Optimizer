@@ -1,13 +1,20 @@
 {
   "name": "prompt-optimizer",
   "version": "0.1.0",
+  "description": "多模型 AI 绘画提示词优化工具 - 支持 Gemini、Grok、DeepSeek、Qwen 等多种 AI 模型，提供提示词优化、翻译、微调等功能",
+  "author": "忘川",
   "private": true,
+  "main": "electron-main.js",
   "scripts": {
     "dev": "cross-env HTTP_PROXY=http://127.0.0.1:10808 HTTPS_PROXY=http://127.0.0.1:10808 NO_PROXY=localhost,127.0.0.1 next dev",
     "dev:no-proxy": "next dev",
     "build": "next build",
+    "build:next": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron:dev": "cross-env NEXT_ELECTRON_DEV=1 electron .",
+    "electron:serve": "npm run build:next && electron .",
+    "electron:pack": "npm run build:next && electron-builder -c"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -29,6 +36,29 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "electron": "^32.2.0",
+    "electron-builder": "^25.0.5",
     "typescript": "^5"
+  },
+  "build": {
+    "appId": "com.prompt.optimizer",
+    "productName": "Prompt Optimizer",
+    "asar": true,
+    "files": [
+      "out/**/*",
+      "electron-main.js",
+      "electron-ipc.js",
+      "preload.js",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    }
   }
 }

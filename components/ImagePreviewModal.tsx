@@ -63,19 +63,32 @@ export default function ImagePreviewModal({
         setImage(null);
 
         try {
-            const response = await fetch('/api/generate-image', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            let data;
+            
+            // 检查是否在 Electron 环境中
+            if (window.electron) {
+                // 使用 IPC 通信
+                data = await window.electron.generateImage({
                     prompt,
                     apiKey,
-                    aspectRatio, // 传给后端
-                }),
-            });
+                    aspectRatio
+                });
+            } else {
+                // 开发模式：使用 fetch
+                const response = await fetch('/api/generate-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt,
+                        apiKey,
+                        aspectRatio,
+                    }),
+                });
 
-            const data = await response.json();
+                data = await response.json();
+            }
 
             if (!data.success) {
                 if (data.error.includes('安全过滤器')) {
