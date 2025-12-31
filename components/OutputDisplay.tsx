@@ -1,11 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Copy, Download, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Copy, Download, Sparkles, Image as ImageIcon, Send } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import CharCounter from '@/components/CharCounter';
-import ImagePreviewModal from './ImagePreviewModal';
-import GeneratingLoader from './GeneratingLoader';
 
 interface OutputDisplayProps {
   positivePrompt: string;
@@ -15,6 +12,7 @@ interface OutputDisplayProps {
   isLoading: boolean;
   isTranslating?: boolean;
   onFineTune?: (prompt: string) => void;
+  onSendToImage?: (prompt: string) => void;
 }
 
 export default function OutputDisplay({
@@ -24,10 +22,10 @@ export default function OutputDisplay({
   translatedNegative,
   isLoading,
   isTranslating = false,
-  onFineTune
+  onFineTune,
+  onSendToImage
 }: OutputDisplayProps) {
   const { addToast } = useToast();
-  const [showPreview, setShowPreview] = useState(false);
 
   const handleCopy = async (text: string, type: string) => {
     try {
@@ -80,12 +78,12 @@ export default function OutputDisplay({
               <div className="flex items-center gap-2">
                 {positivePrompt && (
                   <button
-                    onClick={() => setShowPreview(true)}
+                    onClick={() => onSendToImage?.(positivePrompt)}
                     className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm flex items-center gap-1 mr-1"
-                    title="使用 Z-Image 快速预览"
+                    title="发送到生图页面"
                   >
                     <ImageIcon size={14} />
-                    预览
+                    生图
                   </button>
                 )}
                 {positivePrompt && onFineTune && (
@@ -243,11 +241,11 @@ export default function OutputDisplay({
       {(positivePrompt || negativePrompt) && (
         <div className="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-700 gap-3">
           <button
-            onClick={() => setShowPreview(true)}
+            onClick={() => onSendToImage?.(positivePrompt)}
             className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors flex items-center gap-2"
           >
-            <ImageIcon size={16} />
-            预览效果
+            <Send size={16} />
+            发送到生图
           </button>
           <button
             onClick={handleDownload}
@@ -259,13 +257,6 @@ export default function OutputDisplay({
         </div>
       )}
 
-      {/* 图片预览模态框 */}
-      <ImagePreviewModal
-        isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
-        prompt={positivePrompt}
-        negativePrompt={negativePrompt}
-      />
     </div>
   );
 }

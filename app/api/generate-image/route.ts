@@ -12,7 +12,7 @@ interface GeneratedImage {
 /**
  * Build enhanced prompt for image generation
  */
-function buildImagePrompt(prompt: string, aspectRatio: string = '1:1'): string {
+function buildImagePrompt(prompt: string, aspectRatio: string = '1:1', imageCount: number = 0): string {
     const aspectRatioDesc: Record<string, string> = {
         '1:1': 'square format',
         '16:9': 'wide landscape format (16:9)',
@@ -22,8 +22,9 @@ function buildImagePrompt(prompt: string, aspectRatio: string = '1:1'): string {
     };
 
     const ratio = aspectRatioDesc[aspectRatio] || 'square format';
+    const target = imageCount > 0 ? `the provided ${imageCount === 1 ? 'image' : 'images'}` : 'the following description';
 
-    return `Generate 1 high-quality image in ${ratio} at 1024x1024 pixels resolution, high definition based on the following description. Output only the image without any text.\n\nDescription: ${prompt}`;
+    return `Generate 1 high-quality image in ${ratio} at 1024x1024 pixels resolution, high definition based on ${target}. Output only the image without any text.\n\nDescription: ${prompt}`;
 }
 
 /**
@@ -106,7 +107,7 @@ function parseApiError(status: number, error: any): string {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { prompt, apiKey, aspectRatio } = body;
+        const { prompt, apiKey, aspectRatio, images = [] } = body;
 
         if (!prompt) {
             return NextResponse.json({ success: false, error: '请输入提示词' }, { status: 400 });
@@ -116,7 +117,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: '请先设置 API Key' }, { status: 401 });
         }
 
-        const enhancedPrompt = buildImagePrompt(prompt, aspectRatio);
+        if (!Array.isArray(images)) {
+            return NextResponse.json({ success: false, error: '图片格式错误' }, { status: 400 });
+        }
+
+        if (images.length > 3) {
+            return NextResponse.json({ success: false, error: '最多支持上传 3 张图片' }, { status: 400 });
+        }
+
+        const enhancedPrompt = buildImagePrompt(prompt, aspectRatio, images.length);
+        const parts = images.map((image: { base64: string; mimeType?: string }) => ({
+            inlineData: {
+                data: image.base64,
+                mimeType: image.mimeType || 'image/png',
+            },
+        }));
+
+        parts.push({ text: enhancedPrompt });
 
         const response = await fetch(`${API_BASE}/${MODEL_NAME}:generateContent?key=${apiKey}`, {
             method: 'POST',
@@ -126,11 +143,7 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
                 contents: [
                     {
-                        parts: [
-                            {
-                                text: enhancedPrompt,
-                            },
-                        ],
+                        parts,
                     },
                 ],
                 generationConfig: {
