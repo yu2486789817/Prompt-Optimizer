@@ -10,6 +10,7 @@ import VocabPanel from '@/components/VocabPanel';
 import PromptInput from '@/components/PromptInput';
 import ModelSelector from '@/components/ModelSelector';
 import OutputDisplay from '@/components/OutputDisplay';
+import ImageGenerationPanel from '@/components/ImageGenerationPanel';
 import SortButton from '@/components/SortButton';
 import SettingsButton from '@/components/SettingsButton';
 import TranslationPanel from '@/components/TranslationPanel';
@@ -50,6 +51,8 @@ export default function Home() {
   const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
   const [fineTunePrompt, setFineTunePrompt] = useState('');
   const [fineTuneTarget, setFineTuneTarget] = useState<'input' | 'output'>('output');
+  const [activeTab, setActiveTab] = useState<'optimize' | 'image'>('optimize');
+  const [imagePrompt, setImagePrompt] = useState('');
 
   const { addToast } = useToast();
 
@@ -505,6 +508,29 @@ export default function Home() {
           {/* 主内容区域 */}
           <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
             <div className="max-w-5xl mx-auto space-y-6 pb-20">
+              {/* 顶部分栏 */}
+              <div className="glass rounded-2xl p-2 border border-white/40 dark:border-white/10 flex items-center gap-2">
+                <button
+                  onClick={() => setActiveTab('optimize')}
+                  className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'optimize'
+                    ? 'bg-violet-600 text-white shadow-lg'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-slate-800/50'
+                    }`}
+                >
+                  提示词优化
+                </button>
+                <button
+                  onClick={() => setActiveTab('image')}
+                  className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'image'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-slate-800/50'
+                    }`}
+                >
+                  生图
+                </button>
+              </div>
+
+              <div className={activeTab === 'optimize' ? 'space-y-6' : 'hidden'}>
               {/* 输入区域 */}
               <div className="glass rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl border border-white/40 dark:border-white/10">
                 <div className="flex items-center justify-between mb-4">
@@ -568,6 +594,19 @@ export default function Home() {
                   isLoading={isLoading}
                   isTranslating={isTranslating}
                   onFineTune={(p) => handleFineTune(p, 'output')}
+                  onSendToImage={(prompt) => {
+                    setImagePrompt(prompt);
+                    setActiveTab('image');
+                  }}
+                />
+              </div>
+              </div>
+
+              <div className={activeTab === 'image' ? 'space-y-6' : 'hidden'}>
+                <ImageGenerationPanel
+                  initialPrompt={imagePrompt}
+                  negativePrompt={negativePrompt}
+                  className="border border-white/40 dark:border-white/10"
                 />
               </div>
             </div>

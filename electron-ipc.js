@@ -380,7 +380,7 @@ async function handleTranslateRequest(event, { text, from, to, service, apiKey, 
 }
 
 // 生成图片
-async function handleGenerateImageRequest(event, { prompt, apiKey, aspectRatio }) {
+async function handleGenerateImageRequest(event, { prompt, apiKey, aspectRatio, images = [] }) {
   try {
     if (!prompt) {
       return { success: false, error: '请输入提示词' };
@@ -388,6 +388,14 @@ async function handleGenerateImageRequest(event, { prompt, apiKey, aspectRatio }
 
     if (!apiKey) {
       return { success: false, error: '请先设置 API Key' };
+    }
+
+    if (!Array.isArray(images)) {
+      return { success: false, error: '图片格式错误' };
+    }
+
+    if (images.length > 3) {
+      return { success: false, error: '最多支持上传 3 张图片' };
     }
 
     const aspectRatioDesc = {
@@ -399,21 +407,26 @@ async function handleGenerateImageRequest(event, { prompt, apiKey, aspectRatio }
     };
 
     const ratio = aspectRatioDesc[aspectRatio] || 'square format';
-    const enhancedPrompt = `Generate 1 high-quality image in ${ratio} at 1024x1024 pixels resolution, high definition based on the following description. Output only the image without any text.\n\nDescription: ${prompt}`;
+    const target = images.length > 0 ? `the provided ${images.length === 1 ? 'image' : 'images'}` : 'the following description';
+    const enhancedPrompt = `Generate 1 high-quality image in ${ratio} at 1024x1024 pixels resolution, high definition based on ${target}. Output only the image without any text.\n\nDescription: ${prompt}`;
 
     const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
     const MODEL_NAME = 'gemini-2.0-flash-exp';
+    const parts = images.map((image) => ({
+      inlineData: {
+        data: image.base64,
+        mimeType: image.mimeType || 'image/png',
+      },
+    }));
+
+    parts.push({ text: enhancedPrompt });
 
     const response = await http.post(
       `${API_BASE}/${MODEL_NAME}:generateContent?key=${apiKey}`,
       {
         contents: [
           {
-            parts: [
-              {
-                text: enhancedPrompt,
-              },
-            ],
+            parts: parts,
           },
         ],
         generationConfig: {
@@ -533,4 +546,3 @@ function setupIpcHandlers() {
 }
 
 module.exports = { setupIpcHandlers };
-

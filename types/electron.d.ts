@@ -33,6 +33,10 @@ export interface ElectronAPI {
     prompt: string;
     apiKey: string;
     aspectRatio?: string;
+    images?: Array<{
+      base64: string;
+      mimeType: string;
+    }>;
   }) => Promise<{
     success: boolean;
     imageBase64?: string;
@@ -46,4 +50,3 @@ declare global {
     electron?: ElectronAPI;
   }
 }
-
