@@ -52,12 +52,9 @@ export default function OutputDisplay({
   if (isLoading || isTranslating) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {isLoading ? '正在生成优化提示词...' : '正在翻译成中文...'}
-          </p>
-        </div>
+        <GeneratingLoader
+          label={isLoading ? '正在生成优化提示词...' : '正在翻译成中文...'}
+        />
       </div>
     );
   }

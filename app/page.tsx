@@ -3,7 +3,7 @@
 // Prompt Optimizer Main Page
 
 import { useState, useEffect, useCallback } from 'react';
-import { History, LayoutTemplate, Star, PanelLeftClose, PanelLeft, Sparkles, Boxes, BookOpen } from 'lucide-react';
+import { History, LayoutTemplate, Star, PanelLeftClose, PanelLeft, Sparkles, Boxes, BookOpen, BookOpenText } from 'lucide-react';
 import LoraManager from '@/components/LoraManager';
 import LoraSidebar from '@/components/LoraSidebar';
 import VocabPanel from '@/components/VocabPanel';
@@ -19,6 +19,7 @@ import HistoryPanel from '@/components/HistoryPanel';
 import TemplateModal from '@/components/TemplateModal';
 import FavoritesPanel from '@/components/FavoritesPanel';
 import ThemeToggle from '@/components/ThemeToggle';
+import TutorialModal from '@/components/TutorialModal';
 import { defaultVocabulary, VocabItem } from '@/lib/vocab';
 import { storage } from '@/lib/utils';
 import { supportedModels, AIModel } from '@/lib/models';
@@ -46,6 +47,7 @@ export default function Home() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showLora, setShowLora] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'vocab' | 'lora'>('vocab');
   const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
@@ -125,6 +127,7 @@ export default function Home() {
         setShowTemplates(false);
         setShowFavorites(false);
         setShowLora(false);
+        setShowTutorial(false);
       }
     };
 
@@ -410,6 +413,26 @@ export default function Home() {
         <div className="absolute -bottom-20 left-1/4 w-[550px] h-[550px] bg-rose-200/20 dark:bg-rose-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[120px] animate-blob animation-delay-4000"></div>
       </div>
 
+      {showSplash && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 dark:bg-slate-950/90 animate-splash-screen"
+          onAnimationEnd={() => setShowSplash(false)}
+        >
+          <div className="text-center px-6">
+            <div className="inline-flex items-center gap-3 rounded-full bg-white/10 border border-white/20 px-5 py-2 text-white/80 text-sm mb-4">
+              <Sparkles size={16} className="text-violet-300" />
+              多模型 AI 绘画提示词优化工具
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              Prompt Optimizer
+            </h2>
+            <p className="text-sm sm:text-base text-white/70 mt-3">
+              正在为你准备最佳创作体验...
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="relative z-10 flex h-screen">
         {/* 左侧面板 */}
         <div className={`transition-all duration-300 ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-80'}`}>
@@ -474,6 +497,21 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTutorial(true)}
+                className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-violet-700 dark:text-violet-300 bg-violet-100/70 dark:bg-violet-900/30 hover:bg-violet-200/70 dark:hover:bg-violet-900/50 rounded-lg transition-colors"
+                title="新手教程"
+              >
+                <BookOpenText size={16} />
+                新手教程
+              </button>
+              <button
+                onClick={() => setShowTutorial(true)}
+                className="sm:hidden p-2 text-violet-700 dark:text-violet-300 hover:bg-violet-100/60 dark:hover:bg-violet-900/30 rounded-lg transition-colors"
+                title="新手教程"
+              >
+                <BookOpenText size={18} />
+              </button>
               <button
                 onClick={() => setShowFavorites(true)}
                 className="p-2 text-yellow-600 hover:bg-yellow-100/50 dark:text-yellow-400 dark:hover:bg-yellow-900/30 rounded-lg transition-colors"
@@ -651,6 +689,12 @@ export default function Home() {
         onSelect={handleFavoriteSelect}
         currentPositive={outputPrompt}
         currentNegative={negativePrompt}
+      />
+
+      {/* 新手教程 */}
+      <TutorialModal
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
       />
 
       {/* LoRA 管理 */}
